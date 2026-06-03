@@ -5,6 +5,7 @@ require('dotenv').config();
 const createCrudRouter = require('./crudRouter');
 
 const app = express();
+const publicDomain = process.env.DB_HOST || 'localhost';
 const port = process.env.PORT || 3000;
 
 app.use(cors());
@@ -114,5 +115,5 @@ app.use((req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Servidor corriendo en http://localhost:${port}`);
+  console.log(`Servidor corriendo en https://${publicDomain}:${port}`);
 });
