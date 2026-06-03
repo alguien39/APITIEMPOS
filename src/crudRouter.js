@@ -36,6 +36,18 @@ function createCrudRouter(table, columns) {
         return res.status(400).json({ message: 'No hay datos validos para guardar' });
       }
 
+      // Validación para evitar restricciones duplicadas por usuario+aplicación
+      if (table === 'restricciones' && data.usuario_id && data.aplicacion_id) {
+        const [existing] = await pool.query(
+          `SELECT id FROM restricciones WHERE usuario_id = ? AND aplicacion_id = ? LIMIT 1`,
+          [data.usuario_id, data.aplicacion_id]
+        );
+
+        if (existing.length > 0) {
+          return res.status(400).json({ message: 'Ya existe una restricción para este usuario y aplicación' });
+        }
+      }
+
       const [result] = await pool.query(`INSERT INTO ${table} SET ?`, [data]);
       const [rows] = await pool.query(`SELECT * FROM ${table} WHERE id = ?`, [result.insertId]);
       res.status(201).json(rows[0]);
@@ -50,6 +62,28 @@ function createCrudRouter(table, columns) {
 
       if (Object.keys(data).length === 0) {
         return res.status(400).json({ message: 'No hay datos validos para actualizar' });
+      }
+
+      // Si es la tabla restricciones, evitar que la actualización genere duplicados
+      if (table === 'restricciones') {
+        // Obtener valores actuales para comparar
+        const [currentRows] = await pool.query(`SELECT * FROM restricciones WHERE id = ?`, [req.params.id]);
+        if (currentRows.length === 0) {
+          return res.status(404).json({ message: 'Registro no encontrado' });
+        }
+
+        const current = currentRows[0];
+        const targetUsuario = data.usuario_id !== undefined ? data.usuario_id : current.usuario_id;
+        const targetAplicacion = data.aplicacion_id !== undefined ? data.aplicacion_id : current.aplicacion_id;
+
+        const [conflict] = await pool.query(
+          `SELECT id FROM restricciones WHERE usuario_id = ? AND aplicacion_id = ? AND id != ? LIMIT 1`,
+          [targetUsuario, targetAplicacion, req.params.id]
+        );
+
+        if (conflict.length > 0) {
+          return res.status(400).json({ message: 'Actualización inválida: ya existe otra restricción para este usuario y aplicación' });
+        }
       }
 
       const [result] = await pool.query(`UPDATE ${table} SET ? WHERE id = ?`, [data, req.params.id]);
