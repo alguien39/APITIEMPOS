@@ -48,6 +48,24 @@ function createCrudRouter(table, columns) {
         }
       }
 
+      if (table === 'uso_diario' && data.usuario_id && data.aplicacion_id && data.fecha) {
+        const minutosUsados = data.minutos_usados !== undefined ? data.minutos_usados : 0;
+
+        await pool.query(
+          `INSERT INTO uso_diario (usuario_id, aplicacion_id, fecha, minutos_usados)
+           VALUES (?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE minutos_usados = VALUES(minutos_usados)`,
+          [data.usuario_id, data.aplicacion_id, data.fecha, minutosUsados]
+        );
+
+        const [rows] = await pool.query(
+          `SELECT * FROM uso_diario WHERE usuario_id = ? AND aplicacion_id = ? AND fecha = ?`,
+          [data.usuario_id, data.aplicacion_id, data.fecha]
+        );
+
+        return res.status(201).json(rows[0]);
+      }
+
       const [result] = await pool.query(`INSERT INTO ${table} SET ?`, [data]);
       const [rows] = await pool.query(`SELECT * FROM ${table} WHERE id = ?`, [result.insertId]);
       res.status(201).json(rows[0]);
