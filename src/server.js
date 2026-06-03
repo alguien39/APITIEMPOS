@@ -5,7 +5,7 @@ require('dotenv').config();
 const createCrudRouter = require('./crudRouter');
 
 const app = express();
-const publicDomain = process.env.DB_HOST || 'localhost';
+const publicDomain = process.env.PUBLIC_DOMAIN || 'localhost';
 const port = process.env.PORT || 3000;
 
 app.use(cors());
